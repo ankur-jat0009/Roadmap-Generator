@@ -1,134 +1,117 @@
-# AI Roadmap Generator 🚀
+# AI Roadmap Generator & Career Architect
 
-**Live Demo:** [https://roadmap-generator-smoky.vercel.app/](https://roadmap-generator-smoky.vercel.app/)
+🚀 **Deployments:**
+*   **Live App:** [https://buildmyportfolio99.vercel.app/](https://buildmyportfolio99.vercel.app/)
+*   **API Server:** [https://roadmap-generator-ogf6.onrender.com](https://roadmap-generator-ogf6.onrender.com)
 
-A powerful, AI-driven application that generates personalized learning roadmaps, conducts mock interviews, and creates study guides to help users master new skills.
+An intelligent, full-stack career development platform designed to help developers bridge the gap between their current skills and their dream jobs. Powered by **Gemini 1.5 Flash-lite** and **Sarvam AI**, this tool automates the creation of personalized learning paths, analyzes resumes for ATS compatibility, and provides realistic mock interview experiences.
 
-## ✨ Features
+---
 
-*   **AI Roadmap Generation:** Create detailed, step-by-step learning paths for any topic, level, and timeline.
-*   **Interactive Mock Interviews:** Practice job interviews with an AI hiring manager that adapts to your resume and target role.
-*   **Resume Analysis:** Get instant feedback on your resume, including match scores, strength identification, and project suggestions.
-*   **Study Guides:** Auto-generate comprehensive study guides with formulas and key concepts.              
-*   **Aptitude Tests:** Practice with AI-generated aptitude questions tailored to specific topics.
-*   **Text-to-Speech:** Listen to roadmaps and interview feedback with natural-sounding AI voice.
+## 🌟 Key Features
+
+### 🗺️ AI Roadmap Generator
+Generate detailed, step-by-step learning paths tailored to your specific goals, difficulty level (Beginner to Expert), and timeline.
+*   **Interactive Visualizations:** View your roadmap as a logical graph or a structured timeline.
+*   **Progress Tracking:** Save roadmaps to your profile and track completed steps.
+*   **Resource Curation:** Automatically discovers top-tier videos, documentation, and tools for each step.
+
+### 📄 Resume Architect & Analyzer
+Get instant, professional feedback on your resume using our AI-driven analysis engine.
+*   **ATS Matching:** See how well your resume matches specific job descriptions.
+*   **Skill Gap Analysis:** Identifies exactly which skills you're missing for a target role.
+*   **Project Suggestions:** AI suggests 3 high-impact projects you can build to fill identified skill gaps.
+*   **PDF Parsing:** Upload your existing resume and have the AI extract and analyze the content instantly.
+
+### 🎙️ AI Mock Interviews
+Practice your interview skills with an adaptive AI hiring manager.
+*   **Context-Aware Questions:** The AI asks technical and behavioral questions based on *your* resume and the job you're applying for.
+*   **Voice Support:** Powered by Sarvam AI for natural-sounding voice interactions.
+*   **Detailed Feedback:** Receive a comprehensive performance report at the end of every session.
+
+### 🧠 Aptitude Prep & Study Guides
+*   **Dynamic Quizzes:** AI-generated aptitude questions tailored to your target topics.
+*   **Instant Study Guides:** Generate focused summaries and formula sheets for any tech or academic topic.
+
+---
 
 ## 🛠️ Tech Stack
 
-### Frontend (Client)
-*   **Framework:** React (Vite)
-*   **Styling:** Tailwind CSS, Framer Motion
-*   **Visualization:** React Flow (for roadmap visualization)
-*   **Icons:** Lucide React, React Icons
-*   **Deployment:** Vercel
+**Frontend:**
+*   React 19 (TypeScript)
+*   Vite (Build Tool)
+*   Tailwind CSS (Styling)
+*   React Flow (Graph Visualization)
+*   Lucide React & Heroicons (Iconography)
 
-### Backend (Server)
-*   **Runtime:** Node.js
-*   **Framework:** Express.js
-*   **Language:** TypeScript
-*   **AI Integration:** Google Gemini API (`@google/genai`)
-*   **Database:** Supabase (PostgreSQL)
-*   **Deployment:** Render
+**Backend:**
+*   Node.js & Express
+*   TypeScript
+*   PostgreSQL (Database)
+*   Supabase (Auth & Data Management)
 
-### Automation & AI
-*   **Workflow Engine:** n8n (Self-hosted on Render)
-*   **AI Models:** Gemini 1.5 Flash-lite, Gemini 1.5 Pro
+**AI & Services:**
+*   **Google Gemini 1.5 Flash-lite:** Core logic for roadmap generation and resume analysis.
+*   **Sarvam AI:** Speech-to-Text and Text-to-Speech for mock interviews.
+*   **Supabase Storage:** Profile and resume management.
 
-## 🏗️ Architecture
+---
 
-The project follows a **Client-Server** architecture with a separate automation layer:
+## 🚀 Deployment Guide
 
-1.  **Client (`/client`):** Handles UI/UX, user interactions, and communicates with the backend via REST API.
-2.  **Server (`/server`):** Securely manages API keys, handles business logic, communicates with Google Gemini, and triggers n8n workflows.
-3.  **n8n Service:** Executes complex, multi-step AI workflows (like Roadmap Generation) to ensure reliability and structured output.
+### 1. Database (Supabase)
+1. Create a project at [Supabase](https://supabase.com/).
+2. Run the SQL scripts found in the `/database` directory using the Supabase SQL Editor to set up your tables.
+3. Enable **Google Auth** or **Email Auth** in the Authentication settings.
 
-## 🚀 Getting Started
+### 2. Backend (Render)
+1. Create a **Web Service** on [Render](https://render.com/).
+2. Connect your repository and set the **Root Directory** to `server`.
+3. **Environment Variables:**
+   * `GEMINI_API_KEY`: Your Google AI Studio key.
+   * `SARVAM_API_KEY`: Your Sarvam AI subscription key.
+   * `DATABASE_URL`: Your Supabase PostgreSQL connection string.
+   * `PORT`: `10000`
 
-### Prerequisites
-*   Node.js (v18+)
-*   npm or yarn
-*   Git
+### 3. Frontend (Vercel)
+1. Create a new project on [Vercel](https://vercel.com/).
+2. Set the **Root Directory** to `client`.
+3. **Environment Variables:**
+   * `VITE_API_URL`: Your Render server URL + `/api`.
+   * `VITE_SUPABASE_URL`: Your Supabase Project URL.
+   * `VITE_SUPABASE_ANON_KEY`: Your Supabase API Key.
 
-### Installation
+---
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-username/roadmap-generator.git
-    cd roadmap-generator
-    ```
+## 📦 Installation (Local)
 
-2.  **Install Client Dependencies:**
-    ```bash
-    cd client
-    npm install
-    ```
+1. **Clone the Repo:**
+   ```bash
+   git clone https://github.com/ankur-jat0009/Roadmap-Generator.git
+   ```
 
-3.  **Install Server Dependencies:**
-    ```bash
-    cd ../server
-    npm install
-    ```
+2. **Setup Backend:**
+   ```bash
+   cd server
+   npm install
+   # Add .env with required keys
+   npm run dev
+   ```
 
-### Configuration
+3. **Setup Frontend:**
+   ```bash
+   cd client
+   npm install
+   # Add .env with required keys
+   npm run dev
+   ```
 
-1.  **Server (`server/.env`):**
-    Create a `.env` file in the `server` directory:
-    ```env
-    PORT=3000
-    GEMINI_API_KEY=your_gemini_api_key
-    SUPABASE_URL=your_supabase_url
-    SUPABASE_ANON_KEY=your_supabase_anon_key
-    N8N_WEBHOOK_URL=your_n8n_webhook_url
-    ```
+---
 
-2.  **Client (`client/.env`):**
-    Create a `.env` file in the `client` directory:
-    ```env
-    VITE_API_URL=http://localhost:3000/api
-    ```
+## 🤝 Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Running Locally
-
-1.  **Start the Backend:**
-    ```bash
-    cd server
-    npm run dev
-    ```
-
-2.  **Start the Frontend:**
-    ```bash
-    cd client
-    npm run dev
-    ```
-
-3.  Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-## 📦 Deployment
-
-### Frontend (Vercel)
-*   Connect your GitHub repo to Vercel.
-*   Set Root Directory to `client`.
-*   Add Environment Variable: `VITE_API_URL` (Your Render Backend URL).
-*   Add Environment Variables: `SUPABASE_URL`, `SUPABASE_ANON_KEY`.
-
-### Backend (Render)
-*   Create a **Web Service** on Render.
-*   Connect GitHub repo.
-*   Root Directory: `server`.
-*   Build Command: `npm install && npm run build` (or just `npm install` if using ts-node).
-*   Start Command: `npm start`.
-*   Add Environment Variables from `server/.env`.
-
-### n8n (Render)
-*   Deploy n8n using the official Docker image.
-*   Configure Webhook URL and Google Gemini credentials.
-
-## 🛡️ Security
-
-*   **API Keys:** All sensitive keys (Gemini, n8n) are stored on the backend.
-*   **Authentication:** Supabase Auth manages user sessions securely.
-*   **Database:** Row Level Security (RLS) protects user data.
+---
 
 ## 📄 License
-
 This project is licensed under the ISC License.
