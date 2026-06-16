@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import RecordRTC from 'recordrtc';
 import ArrowUpTrayIcon from './icons/ArrowUpTrayIcon';
 import MicrophoneIcon from './icons/MicrophoneIcon';
 import StopIcon from './icons/StopIcon';
@@ -12,12 +13,13 @@ import {
   continueInterview,
   getInterviewFeedback,
   getAIAudio,
+  transcribeAudio
 } from '../services/geminiService';
 import ArrowPathIcon from './icons/ArrowPathIcon';
 import HandThumbUpIcon from './icons/HandThumbUpIcon';
 import ExclamationTriangleIcon from './icons/ExclamationTriangleIcon';
 import FeedbackModal from './FeedbackModal';
-import { checkTrialUsed, recordTrialUsage } from '../services/trialService';
+import { checkTrialUsed, recordTrialUsage, resetTrialUsage } from '../services/trialService';
 import { User } from '../types';
 
 // Configure worker
@@ -27,13 +29,6 @@ type InterviewStage = 'setup' | 'interviewing' | 'feedback';
 
 // @ts-ignore
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-let recognition: SpeechRecognition | null = null;
-if (SpeechRecognition) {
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.lang = 'en-US';
-  recognition.interimResults = false;
-}
 
 interface MockInterviewPageProps {
   user: User | null;
@@ -59,6 +54,8 @@ const MockInterviewPage: React.FC<MockInterviewPageProps> = ({ user }) => {
   const [recordingStart, setRecordingStart] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState<string>('00:00');
   const timerRef = useRef<number | null>(null);
+  const recorderRef = useRef<RecordRTC | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isTrialUsed, setIsTrialUsed] = useState(false);
   const [isCheckingTrial, setIsCheckingTrial] = useState(true);
@@ -206,33 +203,60 @@ const MockInterviewPage: React.FC<MockInterviewPageProps> = ({ user }) => {
     }
   };
 
-  const startListening = () => {
-    if (!recognition || isAILoading || isUserListening) return;
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      handleUserResponse(transcript);
-    };
-    recognition.onstart = () => {
+  const startListening = async () => {
+    if (isAILoading || isUserListening) return;
+    
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      
+      const recorder = new RecordRTC(stream, {
+        type: 'audio',
+        mimeType: 'audio/wav',
+        recorderType: RecordRTC.StereoAudioRecorder,
+        numberOfAudioChannels: 1,
+        desiredSampRate: 16000,
+      });
+      
+      recorder.startRecording();
+      recorderRef.current = recorder;
       setIsUserListening(true);
       startTimer();
-    };
-    recognition.onend = () => {
-      setIsUserListening(false);
-      stopTimer();
-    };
-    recognition.onerror = (event: any) => {
-      setError(`Speech recognition error: ${event.error}`);
-      setIsUserListening(false);
-      stopTimer();
-    };
-    recognition.start();
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      setError("Could not access microphone. Please check permissions.");
+    }
   };
 
   const stopListening = () => {
-    if (!recognition || !isUserListening) return;
-    recognition.stop();
-    setIsUserListening(false);
-    stopTimer();
+    if (!recorderRef.current || !isUserListening) return;
+    
+    recorderRef.current.stopRecording(async () => {
+      const blob = recorderRef.current!.getBlob();
+      
+      // Stop the stream tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      
+      setIsUserListening(false);
+      stopTimer();
+      setIsAILoading(true);
+      
+      try {
+        const transcript = await transcribeAudio(blob);
+        if (transcript && transcript.trim()) {
+            handleUserResponse(transcript);
+        } else {
+            setError("Could not hear anything. Please try again.");
+            setIsAILoading(false);
+        }
+      } catch (err: any) {
+        setError(`AI failed to hear you: ${err.message}`);
+        setIsAILoading(false);
+      }
+    });
   };
 
   const handleStartInterview = async () => {
@@ -255,7 +279,6 @@ const MockInterviewPage: React.FC<MockInterviewPageProps> = ({ user }) => {
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (!recognition) throw new Error('Speech recognition is not supported by your browser.');
 
       const firstQuestion = await startInterview(resumeText, jobTitle, jobDescription);
       setChatHistory([{ role: 'model', text: firstQuestion }]);
@@ -301,8 +324,8 @@ const MockInterviewPage: React.FC<MockInterviewPageProps> = ({ user }) => {
       URL.revokeObjectURL(currentAudio.src);
       setCurrentAudio(null);
     }
-    if (recognition && isUserListening) {
-      recognition.stop();
+    if (recorderRef.current && isUserListening) {
+      recorderRef.current.stopRecording();
       setIsUserListening(false);
     }
     stopTimer();
@@ -321,6 +344,19 @@ const MockInterviewPage: React.FC<MockInterviewPageProps> = ({ user }) => {
     setStage('setup');
     stopTimer();
     setIsMuted(false);
+  };
+
+  const handleResetTrial = async () => {
+    if (!user) return;
+    setIsCheckingTrial(true);
+    try {
+      await resetTrialUsage(user.id, 'mock_interview');
+      setIsTrialUsed(false);
+    } catch (err) {
+      console.error("Failed to reset trial:", err);
+    } finally {
+      setIsCheckingTrial(false);
+    }
   };
 
   const toggleMute = () => {
@@ -353,7 +389,12 @@ const MockInterviewPage: React.FC<MockInterviewPageProps> = ({ user }) => {
             Right now we are testing this feature
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-
+            <button
+              onClick={handleResetTrial}
+              className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-secondary transition-all shadow-lg shadow-primary/20"
+            >
+              Reset Trial & Try Again
+            </button>
             <button
               onClick={() => (window as any).location.href = '/profile'}
               className="px-8 py-3 bg-background-accent text-text-primary font-bold rounded-xl border border-border hover:bg-background-hover transition-all"
@@ -598,7 +639,7 @@ const MockInterviewPage: React.FC<MockInterviewPageProps> = ({ user }) => {
             {!isUserListening ? (
               <button
                 onClick={startListening}
-                disabled={isAILoading || !recognition}
+                disabled={isAILoading}
                 className="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center shadow hover:bg-sky-500 disabled:bg-slate-600 transition-colors"
                 aria-label="Start speaking"
               >

@@ -3,7 +3,7 @@ import { BriefcaseIcon } from '@heroicons/react/24/outline';
 
 import ThemeToggle from '../src/components/ThemeToggle';
 
-type View = 'home' | 'dashboard' | 'roadmapGenerator' | 'resume' | 'profile' | 'portfolio' | 'resumeBuilder' | 'aptitude' | 'mockInterview' | 'sharedPortfolio' | 'resources' | 'projects';
+type View = 'home' | 'dashboard' | 'roadmapGenerator' | 'resume' | 'profile' | 'portfolio' | 'aptitude' | 'mockInterview' | 'sharedPortfolio';
 
 interface NavbarProps {
     currentView: View;
@@ -29,7 +29,7 @@ const Navbar: React.FC<NavbarProps> = ({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     {/* Brand Logo */}
-                    <div className="flex-shrink-0 flex items-center mr-4"> {/* Added mr-4 to prevent overlap */}
+                    <div className="flex-shrink-0 flex items-center mr-4">
                         <button onClick={() => handleNav(isLoggedIn ? 'dashboard' : 'home')} className="flex items-center space-x-2 group">
                             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm group-hover:scale-105 transition-transform">
                                 <BriefcaseIcon className="w-5 h-5 text-white" />
@@ -39,7 +39,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     {/* Desktop Navigation Links */}
-                    <div className="hidden md:flex items-center justify-center flex-grow space-x-4"> {/* Added flex-grow and justify-center to center nav items */}
+                    <div className="hidden md:flex items-center justify-center flex-grow space-x-4">
                         {isLoggedIn && (
                             <ul className="flex items-center space-x-6">
                                 <li>
@@ -53,11 +53,6 @@ const Navbar: React.FC<NavbarProps> = ({
                                     </button>
                                 </li>
                                 <li>
-                                    <button onClick={() => handleNav('resumeBuilder')} className={`text-sm font-medium transition-colors ${currentView === 'resumeBuilder' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'}`}>
-                                        Resume
-                                    </button>
-                                </li>
-                                <li>
                                     <button onClick={() => handleNav('mockInterview')} className={`text-sm font-medium transition-colors ${currentView === 'mockInterview' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'}`}>
                                         Interview
                                     </button>
@@ -67,10 +62,8 @@ const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     {/* Right Side Actions */}
-                    <div className="hidden md:flex items-center space-x-4 flex-shrink-0"> {/* Added flex-shrink-0 */}
+                    <div className="hidden md:flex items-center space-x-4 flex-shrink-0">
                         <ThemeToggle />
-
-
 
                         {isLoggedIn ? (
                             <div className="relative flex items-center">
@@ -129,15 +122,9 @@ const Navbar: React.FC<NavbarProps> = ({
                             <>
                                 <button onClick={() => handleNav('dashboard')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Dashboard</button>
                                 <button onClick={() => handleNav('roadmapGenerator')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Roadmap Generator</button>
-
                                 <button onClick={() => handleNav('resume')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Resume Analyzer</button>
-                                <button onClick={() => handleNav('resumeBuilder')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Resume Builder</button>
-
-                                <button onClick={() => handleNav('resources')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Resources</button>
-                                <button onClick={() => handleNav('projects')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Projects</button>
                                 <button onClick={() => handleNav('aptitude')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Aptitude Prep</button>
                                 <button onClick={() => handleNav('mockInterview')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Mock Interview</button>
-
                                 <button onClick={() => handleNav('profile')} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-text-secondary hover:text-text-primary hover:bg-background-hover">Profile</button>
                                 <button onClick={() => { onSignOut(); setIsMobileMenuOpen(false); }} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-error hover:bg-background-hover">Sign Out</button>
                             </>

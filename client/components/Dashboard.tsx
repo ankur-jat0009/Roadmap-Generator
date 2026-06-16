@@ -5,7 +5,6 @@ import {
   BriefcaseIcon,
   AcademicCapIcon,
   ChatBubbleLeftRightIcon,
-  QueueListIcon,
   RocketLaunchIcon,
   GlobeAltIcon
 } from '@heroicons/react/24/outline';
@@ -48,15 +47,6 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, onNavigate, stats }) =>
         hover: 'hover:bg-indigo-600'
       },
       {
-        id: 'resumeBuilder',
-        tourId: 'tour-builder-card',
-        title: 'Resume Builder',
-        description: 'Build a professional, ATS-friendly resume from scratch.',
-        icon: <BriefcaseIcon className="w-8 h-8" />,
-        color: 'bg-purple-500',
-        hover: 'hover:bg-purple-600'
-      },
-      {
         id: 'mockInterview',
         tourId: 'tour-interview-card',
         title: 'AI Mock Interview',
@@ -74,24 +64,6 @@ const Dashboard: React.FC<DashboardProps> = ({ userName, onNavigate, stats }) =>
         color: 'bg-emerald-500',
         hover: 'hover:bg-emerald-600',
         // disabled: true // Enabled now
-      },
-      {
-        id: 'resources',
-        tourId: 'tour-resources-card',
-        title: 'Learning Resources',
-        description: 'Access curated study materials, video lectures, and tools.',
-        icon: <QueueListIcon className="w-8 h-8" />,
-        color: 'bg-orange-500',
-        hover: 'hover:bg-orange-600'
-      },
-      {
-        id: 'projects',
-        tourId: 'tour-projects-card',
-        title: 'Student Projects',
-        description: 'Showcase your work and explore projects by other students.',
-        icon: <RocketLaunchIcon className="w-8 h-8" />,
-        color: 'bg-red-500',
-        hover: 'hover:bg-red-600'
       },
       {
         id: 'portfolio',

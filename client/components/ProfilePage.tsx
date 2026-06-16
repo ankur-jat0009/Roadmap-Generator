@@ -32,7 +32,7 @@ interface ProfilePageProps {
     onProgressToggle: (roadmapId: string, stepIndex: number) => void;
     onDeleteRoadmap: (roadmapId: string) => void;
     onUpdateRoadmap: (updatedRoadmap: SavedRoadmap) => void;
-    onNavigate: (view: 'home' | 'resume' | 'profile' | 'resumeBuilder') => void;
+    onNavigate: (view: 'home' | 'resume' | 'profile') => void;
     initialTab?: 'roadmaps' | 'resume' | 'portfolio';
 }
 
@@ -345,11 +345,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userName, savedRoadmaps, onPr
                                                     <span>Ready for Export</span>
                                                 </div>
                                                 <button
-                                                    onClick={() => onNavigate('resumeBuilder')}
-                                                    className="w-full bg-primary text-white font-semibold py-3 px-4 rounded-lg hover:bg-secondary transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2"
+                                                   onClick={() => onNavigate('resume')}
+                                                   className="w-full bg-primary text-white font-semibold py-3 px-4 rounded-lg hover:bg-secondary transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2"
                                                 >
-                                                    <PencilSquareIcon className="w-5 h-5" />
-                                                    Open Resume Builder
+                                                   <PencilSquareIcon className="w-5 h-5" />
+                                                   Analyze Resume
                                                 </button>
                                             </div>
                                         </div>
@@ -365,10 +365,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userName, savedRoadmaps, onPr
                                         <DocumentTextIcon className="w-12 h-12 text-text-secondary/50 mb-3 mx-auto" />
                                         <p className="text-text-secondary font-medium mb-4">You haven't created a resume yet.</p>
                                         <button
-                                            onClick={() => onNavigate('resumeBuilder')}
-                                            className="bg-primary text-white font-semibold py-2 px-6 rounded-lg hover:bg-secondary transition-all shadow-md"
+                                           onClick={() => onNavigate('resume')}
+                                           className="bg-primary text-white font-semibold py-2 px-6 rounded-lg hover:bg-secondary transition-all shadow-md"
                                         >
-                                            Create Your Resume
+                                           Analyze Your Resume
                                         </button>
                                     </div>
                                 )}
@@ -435,10 +435,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ userName, savedRoadmaps, onPr
                                         <GlobeAltIcon className="w-12 h-12 text-text-secondary/50 mb-3 mx-auto" />
                                         <p className="text-text-secondary font-medium mb-4">Complete your resume first to generate a portfolio.</p>
                                         <button
-                                            onClick={() => onNavigate('resumeBuilder')}
-                                            className="bg-primary text-white font-semibold py-2 px-6 rounded-lg hover:bg-secondary transition-all shadow-md"
+                                            onClick={() => onNavigate('resume')}
+                                            className="px-6 py-2 bg-primary text-white font-bold rounded-lg hover:bg-secondary transition-all"
                                         >
-                                            Go to Resume Builder
+                                            Upload Resume for Analysis
                                         </button>
                                     </div>
                                 )}

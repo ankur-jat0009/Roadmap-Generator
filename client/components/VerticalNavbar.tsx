@@ -8,9 +8,7 @@ import {
   AcademicCapIcon,
   ChatBubbleLeftRightIcon,
   ChevronLeftIcon,
-  ChevronRightIcon,
-  QueueListIcon,
-  RocketLaunchIcon
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import ThemeToggle from '../src/components/ThemeToggle';
 
@@ -22,7 +20,7 @@ interface NavItemProps {
   currentView: string;
   onNavigate: (view: string) => void;
   isCollapsed: boolean;
-  disabled?: boolean; // Added disabled prop
+  disabled?: boolean;
 }
 
 const NavItem: React.FC<NavItemProps> = ({ icon, label, view, tourId, currentView, onNavigate, isCollapsed, disabled }) => {
@@ -63,14 +61,10 @@ interface VerticalNavbarProps {
 const VerticalNavbar: React.FC<VerticalNavbarProps> = ({ currentView, onNavigate, isLoggedIn, onSignOut }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Added tourId to items
   const navItems = [
     { icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard', view: 'dashboard', tourId: 'nav-dashboard' },
     { icon: <MapIcon className="w-6 h-6" />, label: 'Roadmap Generator', view: 'roadmapGenerator', tourId: 'nav-roadmap' },
     { icon: <DocumentTextIcon className="w-6 h-6" />, label: 'Resume Analyzer', view: 'resume', tourId: 'nav-resume' },
-    { icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Resume Builder', view: 'resumeBuilder', tourId: 'nav-builder' },
-    { icon: <QueueListIcon className="w-6 h-6" />, label: 'Resources', view: 'resources', tourId: 'nav-resources' },
-    { icon: <RocketLaunchIcon className="w-6 h-6" />, label: 'Projects', view: 'projects', tourId: 'nav-projects' },
     { icon: <AcademicCapIcon className="w-6 h-6" />, label: 'Aptitude Prep', view: 'aptitude', tourId: 'nav-aptitude' },
     { icon: <ChatBubbleLeftRightIcon className="w-6 h-6" />, label: 'Mock Interview', view: 'mockInterview', tourId: 'nav-interview' },
     { icon: <UserIcon className="w-6 h-6" />, label: 'My Profile', view: 'profile', tourId: 'nav-profile' },

@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { AuthCredentials } from '../types';
 
 export const signUpUser = async ({ name, email, password }: AuthCredentials) => {
+    console.log("Attempting Sign Up for:", email);
     const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -11,16 +12,25 @@ export const signUpUser = async ({ name, email, password }: AuthCredentials) => 
             }
         }
     });
-    if (error) throw error;
+    if (error) {
+        console.error("Sign Up Error:", error);
+        throw error;
+    }
+    console.log("Sign Up Success:", data);
     return data;
 };
 
 export const signInUser = async ({ email, password }: AuthCredentials) => {
+    console.log("Attempting Sign In for:", email);
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
     });
-    if (error) throw error;
+    if (error) {
+        console.error("Sign In Error:", error);
+        throw error;
+    }
+    console.log("Sign In Success:", data);
     return data;
 };
 

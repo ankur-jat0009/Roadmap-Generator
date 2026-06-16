@@ -213,13 +213,21 @@ const HomePage: React.FC<{ onSignUpClick: () => void, onNavigate: (view: string)
     React.useEffect(() => {
         // Dynamic import to avoid circular dependencies if any, though not strictly needed here
         import('../services/statsService').then(async (service) => {
-            const data = await service.getPlatformStats();
-            setStats(data);
-        });
+            try {
+                const data = await service.getPlatformStats();
+                setStats(data);
+            } catch (err) {
+                console.error("Home: Error loading stats:", err);
+            }
+        }).catch(err => console.error("Home: Failed to import statsService:", err));
 
         const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setCurrentUserId(user?.id || null);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                setCurrentUserId(user?.id || null);
+            } catch (err) {
+                console.error("Home: Error getting user:", err);
+            }
         };
         getUser();
     }, []);

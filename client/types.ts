@@ -231,41 +231,6 @@ export type Database = {
           }
         ]
       }
-      student_projects: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          description: string
-          project_link: string | null
-          github_link: string | null
-          linkedin_profile: string | null
-          email: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          title: string
-          description: string
-          project_link?: string | null
-          github_link?: string | null
-          linkedin_profile?: string | null
-          email?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          description?: string
-          project_link?: string | null
-          github_link?: string | null
-          linkedin_profile?: string | null
-          email?: string | null
-          created_at?: string
-        }
-      }
       feedbacks: {
         Row: {
           id: string
@@ -324,7 +289,7 @@ export type Database = {
           }
         ]
       },
-      resumes: {
+      user_resumes: {
         Row: {
           id: string;
           user_id: string;
@@ -339,9 +304,10 @@ export type Database = {
           experience: Json | null;
           projects: Json | null;
           skills: Json | null;
+          achievements: Json | null;
+          certifications: Json | null;
+          portfolio_template: string | null;
           created_at: string;
-          updated_at: string;
-          templateType: string | null;
         };
         Insert: {
           id?: string;
@@ -357,9 +323,10 @@ export type Database = {
           experience?: Json | null;
           projects?: Json | null;
           skills?: Json | null;
+          achievements?: Json | null;
+          certifications?: Json | null;
+          portfolio_template?: string | null;
           created_at?: string;
-          updated_at?: string;
-          templateType: string | null;
         };
         Update: {
           id?: string;
@@ -375,11 +342,12 @@ export type Database = {
           experience?: Json | null;
           projects?: Json | null;
           skills?: Json | null;
+          achievements?: Json | null;
+          certifications?: Json | null;
+          portfolio_template?: string | null;
           created_at?: string;
-          updated_at?: string;
-          templateType: string | null;
         };
-      }
+      },
       aptitude_topics: {
         Row: {
           id: string

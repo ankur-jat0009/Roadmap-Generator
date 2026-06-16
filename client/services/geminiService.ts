@@ -24,7 +24,7 @@ export async function suggestProjectsFromResume(resumeText: string, jobTitle: st
 
 export async function generateRoadmap(topic: string, level: string, timeline: string, userId?: string): Promise<Roadmap> {
     try {
-        const response = await fetch(`${API_URL}/roadmap`, {
+        const response = await fetch(`${API_URL}/generate-roadmap`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ topic, level, timeline, userId })
@@ -44,10 +44,10 @@ export async function generateRoadmap(topic: string, level: string, timeline: st
 
 export const generateAIReply = async (prompt: string): Promise<string[]> => {
     try {
-        const response = await fetch(`${API_URL}/ai-reply`, {
+        const response = await fetch(`${API_URL}/chat/reply`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt })
+            body: JSON.stringify({ message: prompt })
         });
 
         if (!response.ok) {
@@ -56,7 +56,7 @@ export const generateAIReply = async (prompt: string): Promise<string[]> => {
         }
 
         const data = await response.json();
-        return data.suggestions;
+        return data.reply;
     } catch (error) {
         console.error("Error generating AI reply:", error);
         throw error;
@@ -70,10 +70,15 @@ export const generateAptitudeQuestions = async (
     count: number
 ): Promise<GeneratedAptitudeQuestion[]> => {
     try {
-        const response = await fetch(`${API_URL}/aptitude-questions`, {
+        const response = await fetch(`${API_URL}/aptitude/questions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ referenceQuestions, topicName, topicCategory, count })
+            body: JSON.stringify({ 
+                referenceQuestions, 
+                topic: topicName, 
+                category: topicCategory, 
+                numQuestions: count 
+            })
         });
 
         if (!response.ok) {
@@ -81,8 +86,7 @@ export const generateAptitudeQuestions = async (
             throw new Error(error.error || 'Failed to generate aptitude questions');
         }
 
-        const data = await response.json();
-        return data.new_questions;
+        return await response.json();
     } catch (error) {
         console.error("Error generating aptitude questions:", error);
         throw error;
@@ -91,7 +95,7 @@ export const generateAptitudeQuestions = async (
 
 export const generateStudyGuide = async (topicName: string): Promise<string> => {
     try {
-        const response = await fetch(`${API_URL}/study-guide`, {
+        const response = await fetch(`${API_URL}/aptitude/study-guide`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ topicName })
@@ -103,7 +107,7 @@ export const generateStudyGuide = async (topicName: string): Promise<string> => 
         }
 
         const data = await response.json();
-        return data.study_guide_markdown;
+        return data.studyGuide;
     } catch (error) {
         console.error("Error generating study guide:", error);
         return "Error generating study guide.";
@@ -236,6 +240,29 @@ export const getAIAudio = async (textToSpeak: string): Promise<string> => {
 
     } catch (error) {
         console.error("Error getting AI audio:", error);
+        throw error;
+    }
+};
+
+export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+    try {
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.wav');
+
+        const response = await fetch(`${API_URL}/transcribe`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || `Transcription failed with status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.transcript;
+    } catch (error) {
+        console.error("Error transcribing audio:", error);
         throw error;
     }
 };

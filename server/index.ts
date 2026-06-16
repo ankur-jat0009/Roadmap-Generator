@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import multer from 'multer';
+import fs from 'fs';
 
 // Import Roadmap & Analysis features from Gemini Service
 import {
@@ -17,8 +19,11 @@ import {
     startInterview,
     continueInterview,
     getInterviewFeedback,
-    getAIAudio
+    getAIAudio,
+    getTranscription
 } from './services/sarvamService';
+
+import { getResumeDirect, upsertResumeDirect } from './services/dbService';
 
 dotenv.config();
 
@@ -28,13 +33,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// Health check
-app.get('/', (req: Request, res: Response) => {
-    res.send('AI Roadmap Generator API is running (Powered by Gemini & Sarvam AI)');
-});
+// Set up multer for audio uploads
+const upload = multer({ dest: 'uploads/' });
 
-// --- GEMINI ROUTES (Roadmaps, Analysis, Study Guides) ---
+// --- API Routes ---
 
+// Resume Analysis
 app.post('/api/analyze-resume', async (req: Request, res: Response) => {
     try {
         const { resumeText, jobTitle, jobDescription } = req.body;
@@ -46,50 +50,19 @@ app.post('/api/analyze-resume', async (req: Request, res: Response) => {
     }
 });
 
-app.post('/api/roadmap', async (req: Request, res: Response) => {
+// Roadmap Generation
+app.post('/api/generate-roadmap', async (req: Request, res: Response) => {
     try {
         const { topic, level, timeline, userId } = req.body;
         const result = await generateRoadmap(topic, level, timeline, userId);
         res.json(result);
     } catch (error) {
-        console.error("Error in /api/roadmap:", error);
+        console.error("Error in /api/generate-roadmap:", error);
         res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
     }
 });
 
-app.post('/api/ai-reply', async (req: Request, res: Response) => {
-    try {
-        const { prompt } = req.body;
-        const result = await generateAIReply(prompt);
-        res.json({ suggestions: result });
-    } catch (error) {
-        console.error("Error in /api/ai-reply:", error);
-        res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
-    }
-});
-
-app.post('/api/aptitude-questions', async (req: Request, res: Response) => {
-    try {
-        const { referenceQuestions, topicName, topicCategory, count } = req.body;
-        const result = await generateAptitudeQuestions(referenceQuestions, topicName, topicCategory, count);
-        res.json({ new_questions: result });
-    } catch (error) {
-        console.error("Error in /api/aptitude-questions:", error);
-        res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
-    }
-});
-
-app.post('/api/study-guide', async (req: Request, res: Response) => {
-    try {
-        const { topicName } = req.body;
-        const result = await generateStudyGuide(topicName);
-        res.json({ study_guide_markdown: result });
-    } catch (error) {
-        console.error("Error in /api/study-guide:", error);
-        res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
-    }
-});
-
+// Personalized Roadmap Generation
 app.post('/api/personalized-roadmap', async (req: Request, res: Response) => {
     try {
         const { resumeText, jobTitle, jobDescription, timeline } = req.body;
@@ -101,34 +74,76 @@ app.post('/api/personalized-roadmap', async (req: Request, res: Response) => {
     }
 });
 
-// --- SARVAM ROUTES (Mock Interview & TTS) ---
+// Aptitude Questions
+app.post('/api/aptitude/questions', async (req: Request, res: Response) => {
+    try {
+        const { topic, numQuestions, category, referenceQuestions } = req.body;
+        // The service now expects 4 arguments: referenceQuestions, topicName, topicCategory, count
+        const result = await generateAptitudeQuestions(
+            referenceQuestions || [], 
+            topic || "General Aptitude", 
+            category || "Quantitative", 
+            numQuestions || 5
+        );
+        res.json(result);
+    } catch (error) {
+        console.error("Error in /api/aptitude/questions:", error);
+        res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
+    }
+});
 
+// Study Guide
+app.post('/api/aptitude/study-guide', async (req: Request, res: Response) => {
+    try {
+        const { topicName } = req.body;
+        const result = await generateStudyGuide(topicName);
+        res.json({ studyGuide: result });
+    } catch (error) {
+        console.error("Error in /api/aptitude/study-guide:", error);
+        res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
+    }
+});
+
+// AI Chat Reply
+app.post('/api/chat/reply', async (req: Request, res: Response) => {
+    try {
+        const { message } = req.body;
+        const result = await generateAIReply(message);
+        res.json({ reply: result });
+    } catch (error) {
+        console.error("Error in /api/chat/reply:", error);
+        res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
+    }
+});
+
+// Mock Interview - Start
 app.post('/api/interview/start', async (req: Request, res: Response) => {
     try {
         const { resumeText, jobTitle, jobDescription } = req.body;
-        const result = await startInterview(resumeText, jobTitle, jobDescription);
-        res.send(result);
+        const firstQuestion = await startInterview(resumeText, jobTitle, jobDescription);
+        res.json({ question: firstQuestion });
     } catch (error) {
         console.error("Error in /api/interview/start:", error);
         res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
     }
 });
 
+// Mock Interview - Continue
 app.post('/api/interview/continue', async (req: Request, res: Response) => {
     try {
         const { conversationHistory, resumeText, jobTitle } = req.body;
-        const result = await continueInterview(conversationHistory, resumeText, jobTitle);
-        res.send(result);
+        const nextQuestion = await continueInterview(conversationHistory, resumeText, jobTitle);
+        res.send(nextQuestion);
     } catch (error) {
         console.error("Error in /api/interview/continue:", error);
         res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
     }
 });
 
+// Mock Interview - Feedback
 app.post('/api/interview/feedback', async (req: Request, res: Response) => {
     try {
         const { conversationHistory, jobTitle, resumeText } = req.body;
-        console.log(`Received feedback request for job: ${jobTitle}`);
         const result = await getInterviewFeedback(conversationHistory, jobTitle, resumeText);
         res.json(result);
     } catch (error) {
@@ -137,18 +152,59 @@ app.post('/api/interview/feedback', async (req: Request, res: Response) => {
     }
 });
 
+// Text-to-Speech
 app.post('/api/tts', async (req: Request, res: Response) => {
     try {
         const { textToSpeak } = req.body;
-        // Sarvam returns a raw Base64 string of the WAV file
         const audioBase64 = await getAIAudio(textToSpeak);
-
-        // Pass it to the client with the correct Data URI scheme so it plays immediately
-        // The client code expects "audioUrl"
         res.json({ audioUrl: `data:audio/wav;base64,${audioBase64}` });
     } catch (error) {
         console.error("Error in /api/tts:", error);
         res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
+    }
+});
+
+// Audio Transcription
+app.post('/api/transcribe', upload.single('audio'), async (req: Request, res: Response) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No audio file provided." });
+        }
+        const transcript = await getTranscription(req.file.path);
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.json({ transcript });
+    } catch (error) {
+        console.error("Error in /api/transcribe:", error);
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ error: error instanceof Error ? error.message : "Internal Server Error" });
+    }
+});
+
+// Direct Database Routes
+app.get('/api/resumes/:userId', async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const resume = await getResumeDirect(userId);
+        res.json(resume);
+    } catch (error) {
+        console.error("Error fetching resume direct:", error);
+        res.status(500).json({ error: "Failed to fetch resume" });
+    }
+});
+
+app.post('/api/resumes', async (req: Request, res: Response) => {
+    try {
+        const { userId, resumeData } = req.body;
+        if (!userId) return res.status(400).json({ error: "User ID required" });
+        const result = await upsertResumeDirect(userId, resumeData);
+        res.json(result);
+    } catch (error) {
+        console.error("Error saving resume direct:", error);
+        res.status(500).json({ error: "Failed to save resume" });
     }
 });
 

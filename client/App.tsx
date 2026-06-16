@@ -9,7 +9,6 @@ import Dashboard from './components/Dashboard';
 import AuthModal from './components/AuthModal';
 import ResumeAnalyzer from './components/ResumeAnalyzer';
 import ProfilePage from './components/ProfilePage';
-import ResumeBuilderPage from './components/ResumeBuilderPage';
 import HomePage from './components/HomePage';
 import AptitudeDashboard from './components/AptitudeDashboard';
 import MockInterviewPage from './components/MockInterviewPage';
@@ -17,19 +16,19 @@ import PortfolioPreview from './components/PortfolioPreview';
 import DevCardPortfolio from './components/portfolio-templates/DevCardPortfolio';
 import CleanPortfolio from './components/portfolio-templates/CleanPortfolio';
 import GradientPortfolio from './components/portfolio-templates/GradientPortfolio';
-import LearningResources from './components/LearningResources';
-import ProjectShowcase from './components/ProjectShowcase';
 import OnboardingTour, { TourStep } from './components/OnboardingTour'; // Import Tour
+import { extractTextFromPDF } from './utils/pdfParser';
 import { getSession, onAuthStateChange, signOutUser } from './services/authService';
 import { getSavedRoadmaps, saveRoadmap, deleteRoadmap, updateRoadmapProgress, updateRoadmap } from './services/roadmapService';
 import { getResume } from './services/resumeService';
-import * as pdfjsLib from 'pdfjs-dist';
+// import * as pdfjsLib from 'pdfjs-dist';
 import ArrowUpTrayIcon from './components/icons/ArrowUpTrayIcon';
+import { SparklesIcon } from '@heroicons/react/24/outline';
 
 // Configure the worker for pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`;
+// pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`;
 
-type View = 'home' | 'dashboard' | 'roadmapGenerator' | 'resume' | 'profile' | 'portfolio' | 'resumeBuilder' | 'aptitude' | 'mockInterview' | 'sharedPortfolio' | 'resources' | 'projects';
+type View = 'home' | 'dashboard' | 'roadmapGenerator' | 'resume' | 'profile' | 'portfolio' | 'aptitude' | 'mockInterview' | 'sharedPortfolio';
 
 const App: React.FC = () => {
     // Initialize view based on URL to prevent flicker
@@ -52,11 +51,9 @@ const App: React.FC = () => {
     const [resumeText, setResumeText] = useState<string>('');
     const [jobTitle, setJobTitle] = useState<string>('');
     const [jobDescription, setJobDescription] = useState<string>('');
-    const [isParsing, setIsParsing] = useState<boolean>(false);
-    const [timeline, setTimeline] = useState<string>('3 Months');
-
-    // Auth & Data State
+    const [isParsing, setIsParsing] = useState(false);
     const [user, setUser] = useState<User | null>(null);
+    const [userName, setUserName] = useState('');
     const [modalView, setModalView] = useState<'signIn' | 'signUp' | null>(null);
     const [savedRoadmaps, setSavedRoadmaps] = useState<SavedRoadmap[]>([]);
 
@@ -78,12 +75,6 @@ const App: React.FC = () => {
             targetId: 'nav-roadmap',
             title: 'AI Roadmap Generator',
             content: 'Generate personalized learning paths for any tech stack or job role tailored to your timeline.',
-            position: 'right'
-        },
-        {
-            targetId: 'nav-builder',
-            title: 'Resume Builder',
-            content: 'Build a professional, ATS-friendly resume from scratch using our templates.',
             position: 'right'
         },
         {
@@ -109,193 +100,137 @@ const App: React.FC = () => {
             setView('sharedPortfolio');
             getResume(sharedUserId).then(data => {
                 if (data) setPublicResumeData(data);
-            });
+            }).catch(err => console.error("App: Error loading public resume:", err));
         }
 
         const checkUser = async () => {
-            const session = await getSession();
-            const currentUser = session?.user ?? null;
-            setUser(currentUser);
+            try {
+                const session = await getSession();
+                const currentUser = session?.user ?? null;
+                setUser(currentUser);
 
-            if (publicView !== 'sharedPortfolio') {
-                if (currentUser) {
-                    setView(v => v === 'home' ? 'dashboard' : v);
-
-                    // Check for Onboarding Tour
-                    const hasSeenTour = localStorage.getItem('onboarding_complete');
-                    if (!hasSeenTour) {
-                        // Small delay to ensure UI is rendered
-                        setTimeout(() => setShowTour(true), 1000);
+                if (publicView !== 'sharedPortfolio') {
+                    if (currentUser) {
+                        setUserName(currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User');
+                        setView('dashboard');
+                        loadRoadmaps();
+                    } else {
+                        setView('home');
                     }
-                } else {
-                    setView('home');
                 }
-            } else if (currentUser && !sharedUserId) {
-                const data = await getResume(currentUser.id);
-                if (data) setPublicResumeData(data);
+            } catch (err) {
+                console.error("App: Error checking user:", err);
             }
         };
+
         checkUser();
 
         const subscription = onAuthStateChange((_event, session) => {
             const currentUser = session?.user ?? null;
+            console.log("Auth State Changed. Event:", _event, "User:", currentUser?.email);
             setUser(currentUser);
-
-            const currentParams = new URLSearchParams(window.location.search);
-            if (currentParams.get('view') !== 'sharedPortfolio') {
-                if (currentUser) {
-                    setView(v => v === 'home' ? 'dashboard' : v);
-                } else {
-                    setView('home');
-                }
+            if (currentUser) {
+                setUserName(currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User');
+                setView(prevView => (prevView === 'home' || prevView === 'sharedPortfolio') ? 'dashboard' : prevView);
+                loadRoadmaps();
+            } else {
+                // Only redirect to home if we aren't in a public view
+                setView(prevView => prevView !== 'sharedPortfolio' ? 'home' : prevView);
             }
         });
 
         return () => {
-            subscription?.unsubscribe();
+            if (subscription && typeof subscription.unsubscribe === 'function') {
+                subscription.unsubscribe();
+            }
         };
     }, []);
 
-    useEffect(() => {
-        if (user) {
-            getSavedRoadmaps().then(setSavedRoadmaps).catch(console.error);
-        } else {
-            setSavedRoadmaps([]);
-        }
-    }, [user]);
-
-    const handleTourComplete = () => {
-        localStorage.setItem('onboarding_complete', 'true');
-        setShowTour(false);
-    };
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files.length > 0) {
-            const file = event.target.files[0];
-            if (file.type !== 'application/pdf') {
-                setError('Please upload a PDF file.');
-                setResumeFile(null);
-                setResumeText('');
-            } else {
-                setResumeFile(file);
-                setError(null);
-                setIsParsing(true);
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-                    let fullText = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        const pageText = textContent.items.map((item: any) => ('str' in item ? item.str : '')).join(' ');
-                        fullText += pageText + '\n';
-                    }
-                    if (!fullText.trim()) {
-                        throw new Error("Could not extract text from PDF.");
-                    }
-                    setResumeText(fullText);
-                } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Failed to parse PDF.');
-                    setResumeText('');
-                    setResumeFile(null);
-                } finally {
-                    setIsParsing(false);
-                }
-            }
+    const loadRoadmaps = async () => {
+        try {
+            const data = await getSavedRoadmaps();
+            setSavedRoadmaps(data);
+        } catch (err) {
+            console.error("Failed to load roadmaps:", err);
         }
     };
 
-    const handleGenerateRoadmap = useCallback(async () => {
+    const handleGenerate = async () => {
         setIsLoading(true);
         setError(null);
         setRoadmap(null);
-
         try {
             let result: RoadmapType;
             if (generationMode === 'topic') {
-                if (!topic.trim()) {
-                    throw new Error('Please enter a topic to generate a roadmap.');
-                }
-                result = await generateRoadmap(topic, level, timeline, user?.id);
+                result = await generateRoadmap(topic, level, '4 weeks', user?.id || '');
             } else {
-                if (!resumeText.trim() || !jobTitle.trim() || !jobDescription.trim()) {
-                    throw new Error('Please provide a Resume, Job Title, and Job Description.');
+                if (!resumeText) {
+                    throw new Error("Resume text not found. Please re-upload your resume.");
                 }
-                result = await generatePersonalizedRoadmap(resumeText, jobTitle, jobDescription, timeline);
+                result = await generatePersonalizedRoadmap(resumeText, jobTitle, jobDescription, '4 weeks');
             }
             setRoadmap(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
-            console.error(err);
+        } catch (err: any) {
+            setError(err.message || "Failed to generate roadmap.");
         } finally {
             setIsLoading(false);
-        }
-    }, [generationMode, topic, level, timeline, resumeText, jobTitle, jobDescription]);
-
-    useEffect(() => {
-        if (autoGenerate && topic) {
-            setView('roadmapGenerator');
-            setGenerationMode('topic');
-            handleGenerateRoadmap();
-            setAutoGenerate(false);
-        }
-    }, [autoGenerate, topic, handleGenerateRoadmap]);
-
-
-
-    const handleSaveRoadmap = async () => {
-        if (!roadmap || !user) return;
-        try {
-            const newSavedRoadmap = await saveRoadmap(roadmap);
-            setSavedRoadmaps(prev => [...prev, newSavedRoadmap]);
-            setSuccessMessage("Roadmap saved in my profile");
-            setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (e: any) {
-            setError("Failed to save roadmap. Please try again.");
-            console.error(e.message);
-        }
-    };
-
-    const handleUpdateRoadmap = async (updatedRoadmap: SavedRoadmap) => {
-        const originalRoadmaps = [...savedRoadmaps];
-        const updatedList = originalRoadmaps.map(r => r.id === updatedRoadmap.id ? updatedRoadmap : r);
-        setSavedRoadmaps(updatedList);
-        try {
-            await updateRoadmap(updatedRoadmap);
-        } catch (e: any) {
-            setError("Failed to save changes.");
-            setSavedRoadmaps(originalRoadmaps);
-        }
-    };
-
-    const handleDeleteRoadmap = async (roadmapId: string) => {
-        const originalRoadmaps = [...savedRoadmaps];
-        setSavedRoadmaps(prev => prev.filter(r => r.id !== roadmapId));
-        try {
-            await deleteRoadmap(roadmapId);
-        } catch (e: any) {
-            setError("Failed to delete roadmap.");
-            setSavedRoadmaps(originalRoadmaps);
         }
     };
 
     const handleProgressToggle = async (roadmapId: string, stepIndex: number) => {
-        const originalRoadmaps = [...savedRoadmaps];
-        const roadmapToUpdate = originalRoadmaps.find(r => r.id === roadmapId);
+        const roadmapToUpdate = savedRoadmaps.find(r => r.id === roadmapId);
         if (!roadmapToUpdate) return;
-        const newCompletedSteps = roadmapToUpdate.completedSteps.includes(stepIndex)
-            ? roadmapToUpdate.completedSteps.filter(i => i !== stepIndex)
-            : [...roadmapToUpdate.completedSteps, stepIndex];
-        const updatedRoadmaps = originalRoadmaps.map(r =>
-            r.id === roadmapId ? { ...r, completedSteps: newCompletedSteps } : r
-        );
-        setSavedRoadmaps(updatedRoadmaps);
-        try {
-            await updateRoadmapProgress(roadmapId, newCompletedSteps);
-        } catch (e: any) {
-            setError("Failed to update progress.");
-            setSavedRoadmaps(originalRoadmaps);
+
+        let newProgress = [...roadmapToUpdate.completedSteps];
+        if (newProgress.includes(stepIndex)) {
+            newProgress = newProgress.filter(i => i !== stepIndex);
+        } else {
+            newProgress.push(stepIndex);
         }
+
+        try {
+            await updateRoadmapProgress(roadmapId, newProgress);
+            setSavedRoadmaps(prev => prev.map(r =>
+                r.id === roadmapId ? { ...r, completedSteps: newProgress } : r
+            ));
+        } catch (err) {
+            console.error("Failed to update progress:", err);
+        }
+    };
+
+    const handleSaveRoadmap = async () => {
+        if (!roadmap || !user) return;
+        try {
+            const saved = await saveRoadmap(roadmap);
+            setSavedRoadmaps(prev => [saved, ...prev]);
+            setSuccessMessage("Roadmap saved to your profile!");
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (err) {
+            console.error("Failed to save roadmap:", err);
+        }
+    };
+
+    const handleDeleteRoadmap = async (id: string) => {
+        try {
+            await deleteRoadmap(id);
+            setSavedRoadmaps(prev => prev.filter(r => r.id !== id));
+        } catch (err) {
+            console.error("Failed to delete roadmap:", err);
+        }
+    };
+
+    const handleUpdateRoadmap = async (updated: SavedRoadmap) => {
+        try {
+            const result = await updateRoadmap(updated);
+            setSavedRoadmaps(prev => prev.map(r => r.id === result.id ? result : r));
+        } catch (err) {
+            console.error("Failed to update roadmap:", err);
+        }
+    };
+
+    const handleTourComplete = () => {
+        setShowTour(false);
+        localStorage.setItem('onboarding_complete', 'true');
     };
 
     const handleProjectSelect = (projectTitle: string) => {
@@ -377,14 +312,8 @@ const App: React.FC = () => {
                     onNavigate={setView as any}
                     initialTab={view === 'portfolio' ? 'portfolio' : undefined}
                 />;
-            case 'resumeBuilder':
-                return <ResumeBuilderPage />;
             case 'aptitude':
                 return <AptitudeDashboard />;
-            case 'resources':
-                return <LearningResources />;
-            case 'projects':
-                return <ProjectShowcase />;
             case 'mockInterview':
                 return <MockInterviewPage user={user} />;
 
@@ -393,7 +322,7 @@ const App: React.FC = () => {
                 const isCurrentRoadmapSaved = !!(roadmap && savedRoadmaps.some(r => r.title === roadmap.title && r.description === roadmap.description));
                 const canGenerate = generationMode === 'topic'
                     ? !isLoading && topic.trim()
-                    : !isLoading && !isParsing && resumeFile && jobTitle.trim() && jobDescription.trim();
+                    : !isLoading && !isParsing && resumeFile && resumeText && jobTitle.trim() && jobDescription.trim();
 
                 return (
                     <div className="w-full max-w-5xl mx-auto flex flex-col items-center">
@@ -412,141 +341,149 @@ const App: React.FC = () => {
                                 <div className="flex mb-6 p-1 bg-background-accent rounded-lg">
                                     <button
                                         onClick={() => setGenerationMode('topic')}
-                                        className={`w-1/2 py-2.5 rounded-md font-semibold transition-colors ${generationMode === 'topic' ? 'bg-primary text-white shadow-md' : 'text-text-secondary hover:bg-background-hover'}`}
+                                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${generationMode === 'topic' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                     >
-                                        Generate by Topic
+                                        By Topic
                                     </button>
                                     <button
                                         onClick={() => setGenerationMode('job')}
-                                        className={`w-1/2 py-2.5 rounded-md font-semibold transition-colors ${generationMode === 'job' ? 'bg-primary text-white shadow-md' : 'text-text-secondary hover:bg-background-hover'}`}
+                                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${generationMode === 'job' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-text-primary'}`}
                                     >
-                                        Generate for Job Role
+                                        Personalized (Job-based)
                                     </button>
                                 </div>
 
-                                <div className="space-y-5">
-                                    {generationMode === 'topic' && (
-                                        <div className="space-y-4 animate-fadeIn">
-                                            <div>
-                                                <label htmlFor="topic" className="block text-sm font-medium text-text-primary mb-2">
-                                                    Topic
-                                                </label>
-                                                <input
-                                                    id="topic" type="text" value={topic}
-                                                    onChange={(e) => setTopic(e.target.value)}
-                                                    onKeyPress={(e) => e.key === 'Enter' && handleGenerateRoadmap()}
-                                                    placeholder="e.g., 'Learn React Native' or 'Master System Design'"
-                                                    className="w-full bg-background border border-border text-text-primary rounded-lg py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all"
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label htmlFor="level" className="block text-sm font-medium text-text-primary mb-2">Level</label>
-                                                <select
-                                                    id="level" value={level}
-                                                    onChange={(e) => setLevel(e.target.value as 'Beginner' | 'Intermediate' | 'Professional')}
-                                                    className="w-full bg-background border border-border text-text-primary rounded-lg py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all"
-                                                    disabled={isLoading}
-                                                >
-                                                    <option>Beginner</option>
-                                                    <option>Intermediate</option>
-                                                    <option>Professional</option>
-                                                </select>
+                                {generationMode === 'topic' ? (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-text-primary mb-2">What do you want to learn?</label>
+                                            <input
+                                                type="text"
+                                                value={topic}
+                                                onChange={(e) => setTopic(e.target.value)}
+                                                placeholder="e.g. React.js, Data Science, Python..."
+                                                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder-text-secondary/50"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-text-primary mb-2">Skill Level</label>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                {(['Beginner', 'Intermediate', 'Professional'] as const).map((l) => (
+                                                    <button
+                                                        key={l}
+                                                        onClick={() => setLevel(l)}
+                                                        className={`py-2.5 rounded-xl border text-sm font-medium transition-all ${level === l ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border text-text-secondary hover:border-primary/50'}`}
+                                                    >
+                                                        {l}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
-                                    )}
-
-                                    {generationMode === 'job' && (
-                                        <div className="space-y-4 animate-fadeIn">
-                                            <div>
-                                                <label htmlFor="resume-upload" className="block text-sm font-medium text-text-primary mb-2">
-                                                    1. Upload Your Resume (PDF)
-                                                </label>
-                                                <label
-                                                    htmlFor="resume-upload"
-                                                    className="relative cursor-pointer flex justify-center w-full rounded-lg border-2 border-dashed border-border px-6 py-8 hover:border-primary transition-colors bg-background hover:bg-background-hover"
-                                                >
-                                                    <div className="text-center">
-                                                        <ArrowUpTrayIcon className="mx-auto h-10 w-10 text-primary/70" />
-                                                        <span className="mt-2 block text-sm font-semibold text-primary">
-                                                            {resumeFile ? resumeFile.name : "Click to upload PDF"}
-                                                        </span>
-                                                        <span className="block text-xs text-text-secondary mt-1">{isParsing ? 'Parsing PDF...' : 'Max size 5MB'}</span>
-                                                        <input id="resume-upload" name="resume-upload" type="file" className="sr-only" accept=".pdf" onChange={handleFileChange} disabled={isLoading || isParsing} />
-                                                    </div>
-                                                </label>
-                                            </div>
-
-                                            <div>
-                                                <label htmlFor="job-title" className="block text-sm font-medium text-text-primary mb-2">
-                                                    2. Target Job Title
-                                                </label>
-                                                <input
-                                                    id="job-title" type="text" value={jobTitle}
-                                                    onChange={(e) => setJobTitle(e.target.value)}
-                                                    placeholder="e.g., 'Senior Frontend Developer'"
-                                                    className="w-full bg-background border border-border text-text-primary placeholder-text-secondary rounded-lg py-3 px-4 focus:ring-2 focus:ring-primary outline-none"
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label htmlFor="job-description" className="block text-sm font-medium text-text-primary mb-2">
-                                                    3. Job Description
-                                                </label>
-                                                <textarea
-                                                    id="job-description" rows={6} value={jobDescription}
-                                                    onChange={(e) => setJobDescription(e.target.value)}
-                                                    placeholder="Paste the full job description here..."
-                                                    className="w-full bg-background border border-border text-text-primary placeholder-text-secondary rounded-lg py-3 px-4 focus:ring-2 focus:ring-primary outline-none"
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <label htmlFor="timeline" className="block text-sm font-medium text-text-primary mb-2">
-                                            {generationMode === 'topic' ? 'Preferred Timeline (Optional)' : '4. Prep Timeline'}
-                                        </label>
-                                        <input
-                                            id="timeline" type="text" value={timeline}
-                                            onChange={(e) => setTimeline(e.target.value)}
-                                            placeholder="e.g., '3 Months'"
-                                            className="w-full bg-background border border-border text-text-primary placeholder-text-secondary rounded-lg py-3 px-4 focus:ring-2 focus:ring-primary outline-none"
-                                            disabled={isLoading}
-                                        />
                                     </div>
-
-                                    <button
-                                        onClick={handleGenerateRoadmap}
-                                        disabled={!canGenerate}
-                                        className="w-full bg-primary text-white font-bold py-4 px-6 rounded-lg hover:bg-primary/90 disabled:bg-background-accent disabled:text-text-secondary disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20 mt-4"
-                                    >
-                                        {isLoading ? 'Generating...' : (generationMode === 'topic' ? 'Generate Roadmap' : 'Generate Personalized Plan')}
-                                    </button>
-                                </div>
-                                {error && <p className="text-error mt-4 text-center bg-error/10 p-3 rounded-lg border border-error/20">{error}</p>}
-                            </div>
-
-                            <div className="w-full mt-10">
-                                {isLoading && <Loader />}
-                                {roadmap && (
-                                    <div>
-                                        {user && (
-                                            <div className="text-center mb-6">
-                                                <button
-                                                    onClick={handleSaveRoadmap}
-                                                    disabled={isCurrentRoadmapSaved}
-                                                    className={`bg-success text-white font-semibold py-2 px-6 rounded-full hover:bg-opacity-90 disabled:bg-background-accent disabled:text-success shadow-lg transition-all ${isCurrentRoadmapSaved ? 'cursor-default' : ''}`}
-                                                >
-                                                    {isCurrentRoadmapSaved ? '✓ Saved' : 'Save Roadmap'}
-                                                </button>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-text-primary mb-2">Target Job Title</label>
+                                                <input
+                                                    type="text"
+                                                    value={jobTitle}
+                                                    onChange={(e) => setJobTitle(e.target.value)}
+                                                    placeholder="e.g. Frontend Engineer"
+                                                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                                                />
                                             </div>
-                                        )}
-                                        <Roadmap roadmap={roadmap} />
+                                            <div>
+                                                <label className="block text-sm font-semibold text-text-primary mb-2">Upload Resume (PDF)</label>
+                                                <div className="relative">
+                                                <input
+                                                        type="file"
+                                                        accept=".pdf"
+                                                        onChange={async (e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (!file) return;
+                                                            
+                                                            setResumeFile(file);
+                                                            setIsParsing(true);
+                                                            setError(null);
+                                                            try {
+                                                                const text = await extractTextFromPDF(file);
+                                                                setResumeText(text);
+                                                            } catch (err: any) {
+                                                                setError(err.message);
+                                                                setResumeFile(null);
+                                                            } finally {
+                                                                setIsParsing(false);
+                                                            }
+                                                        }}
+                                                        className="hidden"
+                                                        id="resume-upload"
+                                                    />
+                                                    <label
+                                                        htmlFor="resume-upload"
+                                                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed transition-all cursor-pointer ${resumeFile ? 'border-success bg-success/5 text-success' : 'border-border hover:border-primary text-text-secondary'}`}
+                                                    >
+                                                        <ArrowUpTrayIcon className="w-5 h-5" />
+                                                        <span className="truncate">{resumeFile ? resumeFile.name : 'Select Resume'}</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-text-primary mb-2">Job Description (Optional but recommended)</label>
+                                            <textarea
+                                                value={jobDescription}
+                                                onChange={(e) => setJobDescription(e.target.value)}
+                                                rows={4}
+                                                placeholder="Paste the job description here for better results..."
+                                                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none"
+                                            />
+                                        </div>
                                     </div>
                                 )}
+
+                                <button
+                                    onClick={handleGenerate}
+                                    disabled={!canGenerate}
+                                    className="w-full mt-8 py-4 bg-primary hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            Generating path...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <SparklesIcon className="w-5 h-5" />
+                                            Generate AI Roadmap
+                                        </>
+                                    )}
+                                </button>
                             </div>
+
+                            {roadmap && (
+                                <div className="mt-12 w-full animate-fadeInUp">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h2 className="text-2xl font-bold text-text-primary">Your Learning Path</h2>
+                                        {user && (
+                                            <button
+                                                onClick={handleSaveRoadmap}
+                                                disabled={isCurrentRoadmapSaved}
+                                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${isCurrentRoadmapSaved ? 'bg-success/10 text-success border border-success/20 cursor-default' : 'bg-white dark:bg-white/5 border border-border hover:border-primary text-text-primary shadow-sm hover:shadow-md'}`}
+                                            >
+                                                {isCurrentRoadmapSaved ? '✓ Saved to Profile' : 'Save to Profile'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <Roadmap roadmap={roadmap} onStepToggle={() => { }} />
+                                </div>
+                            )}
+
+                            {error && (
+                                <div className="mt-6 p-4 bg-error/10 border border-error/20 rounded-xl text-error text-center text-sm font-medium animate-fadeIn">
+                                    {error}
+                                </div>
+                            )}
                         </main>
                     </div>
                 );

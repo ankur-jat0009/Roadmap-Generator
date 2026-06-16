@@ -17,7 +17,7 @@ export const getPlatformStats = async (): Promise<PlatformStats> => {
             supabase.from('roadmaps').select('*', { count: 'exact', head: true }),
 
             // 3. Count Resumes
-            supabase.from('resumes').select('*', { count: 'exact', head: true })
+            supabase.from('user_resumes').select('*', { count: 'exact', head: true })
         ]);
 
         return {

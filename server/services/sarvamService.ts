@@ -1,14 +1,22 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import { ChatMessage, InterviewFeedback } from '../types';
+import fs from 'fs';
 
 dotenv.config();
 
+const SARVAM_API_KEY = process.env.SARVAM_API_KEY || "missing_key";
+
 // Initialize the client pointing to Sarvam's Base URL
+// We use a fallback key to prevent the library from throwing an error on startup
 const openai = new OpenAI({
-    apiKey: process.env.SARVAM_API_KEY,
+    apiKey: SARVAM_API_KEY,
     baseURL: "https://api.sarvam.ai/v1",
 });
+
+if (SARVAM_API_KEY === "missing_key") {
+    console.warn("SARVAM_API_KEY is not set. Interview and voice features will not work.");
+}
 
 /**
  * Generates audio using Sarvam's Bulbul TTS model.
@@ -53,6 +61,42 @@ export const getAIAudio = async (textToSpeak: string): Promise<string> => {
 };
 
 /**
+ * Transcribes audio using Sarvam's Speech-to-Text API.
+ */
+export const getTranscription = async (audioFilePath: string): Promise<string> => {
+    try {
+        const fileBuffer = fs.readFileSync(audioFilePath);
+        
+        // Sarvam STT requires multipart/form-data
+        const formData = new FormData();
+        const blob = new Blob([fileBuffer], { type: 'audio/wav' });
+        formData.append('file', blob, 'audio.wav');
+        formData.append('model', 'saarika:v2.5'); // Updated to a valid model
+
+        const response = await fetch("https://api.sarvam.ai/speech-to-text", {
+            method: "POST",
+            headers: {
+                "api-subscription-key": process.env.SARVAM_API_KEY || "",
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error("Sarvam STT Raw Error:", errText);
+            throw new Error(`Sarvam STT Error: ${errText}`);
+        }
+
+        const data = await response.json();
+        return data.transcript || "";
+
+    } catch (error) {
+        console.error("Sarvam STT failed:", error);
+        throw error;
+    }
+};
+
+/**
  * Starts the interview by generating a greeting and the first question.
  */
 export const startInterview = async (resumeText: string, jobTitle: string, jobDescription: string): Promise<string> => {
@@ -69,7 +113,7 @@ export const startInterview = async (resumeText: string, jobTitle: string, jobDe
         4. Do NOT include any placeholders or markdown. Just the spoken text.`;
 
         const completion = await openai.chat.completions.create({
-            model: "sarvam-m",
+            model: "sarvam-30b",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: "Start the interview now." }
@@ -111,12 +155,14 @@ export const continueInterview = async (conversationHistory: ChatMessage[], resu
         ${resumeText.substring(0, 4000)}... (truncated for context)
 
         Instructions:
-        1. Briefly acknowledge the candidate's last answer.
-        2. Ask the NEXT logical question.
-        3. Mix behavioral and technical questions based on the resume.
-        4. CRITICAL: Ask ONLY ONE question at a time.
-        5. Aim for a comprehensive interview (roughly 5-8 questions total).
-        6. When you have gathered enough information, say EXACTLY: "That's all the questions I have. I'm now compiling your feedback report for you. Please wait just a moment."`;
+        1. Briefly acknowledge the candidate's last answer (e.g., "Great," "I see," "That's interesting").
+        2. Ask the NEXT logical question. Be SPECIFIC.
+        3. If the candidate mentions projects or skills (e.g., AI/ML, specific tools), dive deeper into them.
+        4. Mix behavioral (S.T.A.R method) and technical questions.
+        5. CRITICAL: Ask ONLY ONE question at a time. Do NOT repeat yourself.
+        6. Avoid generic questions like "Could you elaborate on that?" unless you specify WHAT to elaborate on (e.g., "Could you elaborate on the AI projects you implemented at NITK?").
+        7. Aim for a comprehensive interview (roughly 5-8 questions total).
+        8. When you have gathered enough information, say EXACTLY: "That's all the questions I have. I'm now compiling your feedback report for you. Please wait just a moment."`;
 
         // Cast messages to any to avoid strict typing issues with the mapped roles
         const apiMessages: any[] = [
@@ -125,13 +171,18 @@ export const continueInterview = async (conversationHistory: ChatMessage[], resu
         ];
 
         const completion = await openai.chat.completions.create({
-            model: "sarvam-m",
+            model: "sarvam-30b",
             messages: apiMessages,
             max_tokens: 200,
-            temperature: 0.7,
+            temperature: 0.8, // Slightly higher for more variety
         });
 
-        return completion.choices[0].message.content || "Could you elaborate on that?";
+        const nextQuestion = completion.choices[0].message.content;
+        if (!nextQuestion || nextQuestion.length < 5) {
+             return "That's interesting. Can you tell me more about the specific technical challenges you faced in your AI/ML projects?";
+        }
+
+        return nextQuestion;
 
     } catch (error: any) {
         console.error("Error continuing interview:", error);
@@ -194,7 +245,7 @@ export const getInterviewFeedback = async (conversationHistory: ChatMessage[], j
         console.log("Full prompt payload size approx:", JSON.stringify(apiMessages).length);
 
         const completion = await openai.chat.completions.create({
-            model: "sarvam-m",
+            model: "sarvam-30b",
             messages: apiMessages,
             temperature: 0.5,
         });

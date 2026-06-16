@@ -8,37 +8,31 @@ const initialResumeState: ResumeData = {
     achievements: [], certifications: [] // <-- ADDED
 };
 
-// THIS IS THE NEW FUNCTION THAT WAS MISSING
-// It fetches a user's resume data from the database.
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+// Fetches a user's resume data from the database.
 export const getResume = async (userId: string): Promise<ResumeData | null> => {
-    const { data, error } = await supabase
-        .from('resumes')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+    try {
+        const response = await fetch(`${API_URL}/resumes/${userId}`);
+        if (!response.ok) throw new Error("Failed to fetch resume");
+        const data = await response.json();
 
-    // 'PGRST116' is the code for 'No rows found', which is not an error in this case,
-    // it just means the user hasn't created a resume yet.
-    if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching resume:', error);
-        throw error;
+        if (!data) return null;
+        
+        return {
+            ...initialResumeState,
+            ...data,
+            education: Array.isArray(data.education) ? data.education : [],
+            experience: Array.isArray(data.experience) ? data.experience : [],
+            projects: Array.isArray(data.projects) ? data.projects : [],
+            skills: Array.isArray(data.skills) ? data.skills : [],
+            achievements: Array.isArray(data.achievements) ? data.achievements : [],
+            certifications: Array.isArray(data.certifications) ? data.certifications : [],
+        };
+    } catch (error) {
+        console.error('Error fetching resume direct:', error);
+        return null;
     }
-
-    if (!data) {
-        return null; // No resume found for this user.
-    }
-    
-    // Ensure that array fields are always arrays, even if they are null in the database.
-    return {
-        ...initialResumeState,
-        ...data,
-        education: Array.isArray(data.education) ? data.education : [],
-        experience: Array.isArray(data.experience) ? data.experience : [],
-        projects: Array.isArray(data.projects) ? data.projects : [],
-        skills: Array.isArray(data.skills) ? data.skills : [],
-        achievements: Array.isArray(data.achievements) ? data.achievements : [], // <-- ADDED
-        certifications: Array.isArray(data.certifications) ? data.certifications : [], // <-- ADDED
-    };
 };
 
 
@@ -47,26 +41,28 @@ export const upsertResume = async (resumeData: Partial<ResumeData>): Promise<Res
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
-    // We use 'upsert' to either create a new resume or update an existing one.
-    const { data, error } = await supabase
-        .from('resumes')
-        .upsert({ ...resumeData, user_id: user.id })
-        .select()
-        .single();
+    try {
+        const response = await fetch(`${API_URL}/resumes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, resumeData })
+        });
 
-    if (error) {
-        console.error('Error upserting resume:', error);
+        if (!response.ok) throw new Error("Failed to save resume");
+        const data = await response.json();
+
+        return {
+            ...initialResumeState,
+            ...data,
+            education: Array.isArray(data.education) ? data.education : [],
+            experience: Array.isArray(data.experience) ? data.experience : [],
+            projects: Array.isArray(data.projects) ? data.projects : [],
+            skills: Array.isArray(data.skills) ? data.skills : [],
+            achievements: Array.isArray(data.achievements) ? data.achievements : [],
+            certifications: Array.isArray(data.certifications) ? data.certifications : [],
+        };
+    } catch (error) {
+        console.error('Error upserting resume direct:', error);
         throw error;
     }
-
-    return {
-        ...initialResumeState,
-        ...data,
-        education: Array.isArray(data.education) ? data.education : [],
-        experience: Array.isArray(data.experience) ? data.experience : [],
-        projects: Array.isArray(data.projects) ? data.projects : [],
-        skills: Array.isArray(data.skills) ? data.skills : [],
-        achievements: Array.isArray(data.achievements) ? data.achievements : [], // <-- ADDED
-        certifications: Array.isArray(data.certifications) ? data.certifications : [], // <-- ADDED
-    };
 };

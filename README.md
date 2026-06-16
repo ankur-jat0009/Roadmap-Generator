@@ -9,7 +9,7 @@ A powerful, AI-driven application that generates personalized learning roadmaps,
 *   **AI Roadmap Generation:** Create detailed, step-by-step learning paths for any topic, level, and timeline.
 *   **Interactive Mock Interviews:** Practice job interviews with an AI hiring manager that adapts to your resume and target role.
 *   **Resume Analysis:** Get instant feedback on your resume, including match scores, strength identification, and project suggestions.
-*   **Study Guides:** Auto-generate comprehensive study guides with formulas and key concepts.
+*   **Study Guides:** Auto-generate comprehensive study guides with formulas and key concepts.              
 *   **Aptitude Tests:** Practice with AI-generated aptitude questions tailored to specific topics.
 *   **Text-to-Speech:** Listen to roadmaps and interview feedback with natural-sounding AI voice.
 
@@ -32,7 +32,7 @@ A powerful, AI-driven application that generates personalized learning roadmaps,
 
 ### Automation & AI
 *   **Workflow Engine:** n8n (Self-hosted on Render)
-*   **AI Models:** Gemini 2.0 Flash, Gemini 1.5 Pro
+*   **AI Models:** Gemini 1.5 Flash-lite, Gemini 1.5 Pro
 
 ## 🏗️ Architecture
 

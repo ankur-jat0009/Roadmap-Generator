@@ -6,7 +6,7 @@ export const checkTrialUsed = async (userId: string, type: string): Promise<bool
         .select('*')
         .eq('user_id', userId)
         .eq('trial_type', type)
-        .single();
+        .maybeSingle();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 is code for 'no rows found'
         console.error("Error checking trial usage:", error);
@@ -23,6 +23,19 @@ export const recordTrialUsage = async (userId: string, type: string): Promise<vo
 
     if (error) {
         console.error("Error recording trial usage:", error);
+        throw error;
+    }
+};
+
+export const resetTrialUsage = async (userId: string, type: string): Promise<void> => {
+    const { error } = await supabase
+        .from('user_trials')
+        .delete()
+        .eq('user_id', userId)
+        .eq('trial_type', type);
+
+    if (error) {
+        console.error("Error resetting trial usage:", error);
         throw error;
     }
 };
