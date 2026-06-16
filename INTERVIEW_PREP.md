@@ -84,5 +84,39 @@ This document contains 20 detailed interview questions and answers based on the 
 
 ---
 
+### **Part 5: Deployment, Performance & Scaling**
+
+#### **21. Why did you choose Vite over Create React App (CRA)?**
+**Answer:** "Vite is significantly faster because it uses 'native ES modules' during development, avoiding the need to rebuild the entire app on every change. It also offers a much faster build process for production using Rollup, which improves the overall developer experience and deployment speed."
+
+#### **22. Can you explain the "Server Wake-up" fix you implemented for Render?**
+**Answer:** "On the Render free tier, the server 'sleeps' after 15 minutes of inactivity. This can cause a 'Cold Start' delay of up to 50 seconds. I solved this by adding a `pingServer()` function in the frontend that pings the server's health check endpoint as soon as the app loads. This 'pre-warms' the server so it's ready by the time the user interacts with the app."
+
+#### **23. How do you handle environment variables in Vite vs. Node?**
+**Answer:** "In the backend, I use `process.env`. In the frontend (Vite), variables must be prefixed with `VITE_` (e.g., `VITE_API_URL`) and are accessed via `import.meta.env`. This is a security measure—Vite only exposes variables starting with `VITE_` to the client, keeping sensitive backend keys hidden from the browser."
+
+#### **24. What is the difference between Gemini 1.5 Pro and Gemini 1.5 Flash?**
+**Answer:** "I used **Gemini 1.5 Flash-lite** for this project because it is optimized for high-speed, low-latency responses. While Gemini Pro is more capable for extremely complex reasoning, Flash is better for real-time applications like roadmap generation where the user expects a quick result without sacrificing accuracy."
+
+#### **25. How do you ensure the AI output doesn't break your frontend structure?**
+**Answer:** "I use **JSON Response Schemas**. When sending a request to Gemini, I provide a strict blueprint of the JSON I expect (e.g., specific keys and data types). This ensures the AI always returns a consistent structure that my React components can safely parse without crashing."
+
+#### **26. What does the `express.json({ limit: '10mb' })` line in your server do?**
+**Answer:** "It increases the maximum allowed size for JSON payloads. Since our app involves sending large text data like full resumes and detailed roadmaps, the default 1MB limit is often insufficient. Increasing it to 10MB ensures that large documents can be processed without 'Request Entity Too Large' errors."
+
+#### **27. How does the "Resume Analysis" specifically generate project suggestions?**
+**Answer:** "It performs a **Gap Analysis**. The AI compares the skills found in the resume against those required in the job description. It identifies the 'Missing Skills' and then brainstorms 3 unique projects that would specifically require the user to learn and apply those exact missing technologies."
+
+#### **28. What would be your strategy for scaling this to 10,000 users?**
+**Answer:** "I would implement three main changes: 1. **Caching:** Use Redis to cache common roadmaps so we don't call the AI for the same topics. 2. **Job Queues:** Move AI generation to a background worker (like BullMQ) so the API doesn't hang. 3. **Load Balancing:** Deploy multiple server instances to handle the increased traffic."
+
+#### **29. What was the most difficult technical challenge you faced?**
+**Answer:** "Managing **CORS and Timeouts** specifically on mobile browsers. Mobile Safari is very strict with cross-origin requests and short timeouts. I had to harden the CORS configuration on the backend and implement the server-warming ping to ensure mobile users didn't get 'Load failed' errors due to Render's cold start."
+
+#### **30. Why did you separate the client and server into distinct folders?**
+**Answer:** "This 'Monorepo' style separation allows for independent deployment and scaling. Vercel can handle the static frontend assets via their edge network, while Render handles the dynamic Node.js environment. It also prevents dependency conflicts between frontend and backend libraries."
+
+---
+
 ### **Summary Tip for the Interviewer:**
 *"The goal of this project wasn't just to use AI, but to use it **responsibly**. I focused on data validation, cost management, and user experience to ensure that the AI acts as a helpful tool rather than an unpredictable black box."*
