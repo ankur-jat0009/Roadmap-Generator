@@ -8,7 +8,8 @@ const initialResumeState: ResumeData = {
     achievements: [], certifications: [] // <-- ADDED
 };
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
 // Fetches a user's resume data from the database.
 export const getResume = async (userId: string): Promise<ResumeData | null> => {

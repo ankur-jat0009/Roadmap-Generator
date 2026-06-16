@@ -34,10 +34,12 @@ app.use(cors({
     origin: [
         'http://localhost:5173',
         'https://roadmap-generator-ogf6.onrender.com',
-        /\.vercel\.app$/ // Allow any Vercel deployment
+        'https://buildmyportfolio99.vercel.app',
+        /\.vercel\.app$/ 
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: true
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 app.use(express.json({ limit: '10mb' }));
 

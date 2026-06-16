@@ -1,6 +1,8 @@
 import { Roadmap, ProjectSuggestion, AnalysisReport, ChatMessage, InterviewFeedback, AptitudeQuestion, GeneratedAptitudeQuestion } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Normalize URL: remove trailing slash, then ensure it ends with /api
+const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
 export async function suggestProjectsFromResume(resumeText: string, jobTitle: string, jobDescription: string): Promise<AnalysisReport> {
     try {

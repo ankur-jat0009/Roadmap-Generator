@@ -171,7 +171,12 @@ const App: React.FC = () => {
             }
             setRoadmap(result);
         } catch (err: any) {
-            setError(err.message || "Failed to generate roadmap.");
+            console.error("Roadmap Generation Error:", err);
+            if (err.name === 'TypeError' && err.message === 'Load failed') {
+                setError("Connection failed. This might be due to a server timeout or CORS restriction on mobile. Please try again or check your internet connection.");
+            } else {
+                setError(err.message || "Failed to generate roadmap. Please check if the server is awake.");
+            }
         } finally {
             setIsLoading(false);
         }
