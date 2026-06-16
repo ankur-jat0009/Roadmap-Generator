@@ -475,7 +475,7 @@ const App: React.FC = () => {
                                             </button>
                                         )}
                                     </div>
-                                    <Roadmap roadmap={roadmap} onStepToggle={() => { }} />
+                                    <Roadmap roadmap={roadmap} />
                                 </div>
                             )}
 

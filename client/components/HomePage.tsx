@@ -74,9 +74,9 @@ const JourneyCard = ({
     title: string,
     subtitle: string,
     description: string,
-    icon: JSX.Element,
+    icon: React.ReactNode,
     colorClass: string,
-    visual: JSX.Element,
+    visual: React.ReactNode,
     isLast?: boolean,
     onClick?: () => void
 }) => (

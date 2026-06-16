@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import ReactFlow, { MiniMap, Controls, Background, Node, Edge, useReactFlow, ReactFlowProvider } from 'reactflow';
+import ReactFlow, { MiniMap, Controls, Background, Node, Edge, useReactFlow, ReactFlowProvider, BackgroundVariant } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { SavedRoadmap } from '../types';
 import CustomStepNode from './CustomStepNode';
@@ -124,7 +124,7 @@ const GraphView: React.FC<GraphViewProps> = ({ roadmap }) => {
             >
                 <Controls />
                 <MiniMap nodeColor="#0ea5e9" />
-                <Background variant="dots" gap={12} size={1} />
+                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
             </ReactFlow>
         </div>
     );

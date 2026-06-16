@@ -37,7 +37,7 @@ interface ProfilePageProps {
 }
 
 // Helper component moved outside to prevent re-renders
-const StatsCard = ({ icon, label, value, colorClass }: { icon: JSX.Element, label: string, value: string | number, colorClass: string }) => (
+const StatsCard = ({ icon, label, value, colorClass }: { icon: React.ReactNode, label: string, value: string | number, colorClass: string }) => (
     <div className="bg-background border border-border p-4 rounded-xl shadow-sm flex items-center space-x-4 hover:shadow-md transition-shadow">
         <div className={`p-3 rounded-full ${colorClass} bg-opacity-10 text-current`}>
             {icon}
