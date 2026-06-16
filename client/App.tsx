@@ -21,6 +21,7 @@ import { extractTextFromPDF } from './utils/pdfParser';
 import { getSession, onAuthStateChange, signOutUser } from './services/authService';
 import { getSavedRoadmaps, saveRoadmap, deleteRoadmap, updateRoadmapProgress, updateRoadmap } from './services/roadmapService';
 import { getResume } from './services/resumeService';
+import { pingServer } from './services/geminiService';
 // import * as pdfjsLib from 'pdfjs-dist';
 import ArrowUpTrayIcon from './components/icons/ArrowUpTrayIcon';
 import { SparklesIcon } from '@heroicons/react/24/outline';
@@ -92,6 +93,9 @@ const App: React.FC = () => {
     ];
 
     useEffect(() => {
+        // Ping server on mount to wake it up (Render cold start)
+        pingServer();
+
         const params = new URLSearchParams(window.location.search);
         const publicView = params.get('view');
         const sharedUserId = params.get('userId');

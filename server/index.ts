@@ -46,6 +46,10 @@ app.use(express.json({ limit: '10mb' }));
 // Set up multer for audio uploads
 const upload = multer({ dest: 'uploads/' });
 
+// Root & Health Check
+app.get('/', (req, res) => res.send("API is running..."));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
 // --- API Routes ---
 
 // Resume Analysis

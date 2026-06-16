@@ -4,6 +4,18 @@ const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 // Normalize URL: remove trailing slash, then ensure it ends with /api
 const API_URL = rawApiUrl.replace(/\/$/, '').endsWith('/api') ? rawApiUrl.replace(/\/$/, '') : `${rawApiUrl.replace(/\/$/, '')}/api`;
 
+/**
+ * Pings the server to wake it up (Render free tier)
+ */
+export async function pingServer(): Promise<void> {
+    try {
+        await fetch(`${API_URL.replace('/api', '')}/api/health`, { method: 'GET', mode: 'cors' });
+        console.log("Server pinged successfully.");
+    } catch (err) {
+        console.warn("Server ping failed (might be sleeping):", err);
+    }
+}
+
 export async function suggestProjectsFromResume(resumeText: string, jobTitle: string, jobDescription: string): Promise<AnalysisReport> {
     try {
         const response = await fetch(`${API_URL}/analyze-resume`, {
